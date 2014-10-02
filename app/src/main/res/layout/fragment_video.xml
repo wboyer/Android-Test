@@ -15,23 +15,40 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
+        <ListView
+            android:id="@+id/providers_list_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal">
+        </ListView>
+
+        <ListView
+            android:id="@+id/titles_list_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal">
+        </ListView>
+
         <TableLayout
             android:id="@+id/providers_table_view"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"></TableLayout>
+            android:layout_gravity="center_horizontal">
+        </TableLayout>
 
         <TableLayout
             android:id="@+id/titles_table_view"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"></TableLayout>
+            android:layout_gravity="center_horizontal">
+        </TableLayout>
 
         <TableLayout
             android:id="@+id/segments_table_view"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"></TableLayout>
+            android:layout_gravity="center_horizontal">
+        </TableLayout>
     </LinearLayout>
 
     <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
