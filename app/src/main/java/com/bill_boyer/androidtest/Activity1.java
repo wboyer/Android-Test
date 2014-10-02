@@ -22,6 +22,8 @@ public class Activity1 extends Activity implements ActionBar.TabListener
 
     ViewPager mViewPager;
 
+    private static final String LOG = "Activity1";
+
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
@@ -81,7 +83,9 @@ public class Activity1 extends Activity implements ActionBar.TabListener
     @Override
     public void onTabReselected(ActionBar.Tab tab, FragmentTransaction fragmentTransaction) {}
 
-    public class SectionsPagerAdapter extends FragmentPagerAdapter {
+    public class SectionsPagerAdapter extends FragmentPagerAdapter
+    {
+        VideoFragment mVideoFragment;
 
         public SectionsPagerAdapter(FragmentManager fm)
         {
@@ -116,6 +120,18 @@ public class Activity1 extends Activity implements ActionBar.TabListener
                     return getString(R.string.title_section3).toUpperCase(l);
             }
             return null;
+        }
+
+        @Override
+        public void setPrimaryItem (ViewGroup container, int position, Object object)
+        {
+            super.setPrimaryItem(container, position, object);
+
+            if (position == 0)
+                mVideoFragment = (VideoFragment)object;
+
+            if (mVideoFragment != null)
+                mVideoFragment.setIsVisible(position == 0);
         }
     }
 
