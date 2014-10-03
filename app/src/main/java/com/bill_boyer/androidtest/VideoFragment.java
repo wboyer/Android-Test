@@ -9,12 +9,11 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
-import android.widget.TableLayout;
-import android.widget.TableRow;
-import android.widget.TextView;
 
+import com.bill_boyer.media.catalog.HttpClient;
 import com.bill_boyer.media.catalog.Provider;
 import com.bill_boyer.media.catalog.Title;
 import com.bill_boyer.media.catalog.Segment;
@@ -26,6 +25,7 @@ import org.apache.http.client.methods.HttpUriRequest;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 
 public class VideoFragment extends Fragment
 {
@@ -64,22 +64,9 @@ public class VideoFragment extends Fragment
         mActivity = getActivity();
         mVideoPlayer = new VideoPlayer(mActivity);
 
-        ListView providersListView = (ListView)mActivity.findViewById(R.id.providers_list_view);
+        MyHttpClient httpClient = new MyHttpClient();
 
-        ArrayList<String> test = new ArrayList<String>();
-        test.add("a");
-        test.add("b");
-        test.add("c");
-
-        ArrayAdapter<String> arrayAdapter = new ArrayAdapter<String>(mActivity, R.layout.providers_table_row, test);
-
-        providersListView.setAdapter(arrayAdapter);
-
-        new LoadProvidersTask().execute(new Object[]{mActivity, (TableLayout)mActivity.findViewById(R.id.providers_table_view)});
-
-        new LoadTitlesTask().execute(new Object[]{mActivity, (TableLayout)mActivity.findViewById(R.id.titles_table_view)});
-
-        new LoadSegmentsTask().execute(new Object[]{mActivity, (TableLayout)mActivity.findViewById(R.id.segments_table_view)});
+        new LoadProvidersTask().execute(new Object[]{mActivity, mVideoPlayer, httpClient});
     }
 
     public void setIsVisible(boolean isVisible)
@@ -88,39 +75,57 @@ public class VideoFragment extends Fragment
             mVideoPlayer.setIsVisible(isVisible);
     }
 
+    private static List<Provider> LoadProviders(final Activity activity, HttpClient httpClient)
+    {
+        ProviderFactoryImpl factory = new ProviderFactoryImpl(httpClient);
+        final List<Provider> providers = new ArrayList<Provider>(factory.getProviders().values());
+
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                ListView providersListView = (ListView) activity.findViewById(R.id.providers_list_view);
+                ArrayAdapter<Object> arrayAdapter = new ArrayAdapter<Object>(activity, R.layout.providers_table_row, providers.toArray());
+                providersListView.setAdapter(arrayAdapter);
+            }
+        });
+
+        return providers;
+    }
+
     private static class LoadProvidersTask extends AsyncTask<Object[], Void, Void>
     {
         @Override
         protected Void doInBackground(Object[]... objects)
         {
             Object[] args = objects[0];
+            Activity activity = (Activity)args[0];
+            VideoPlayer videoPlayer = (VideoPlayer)args[1];
+            HttpClient httpClient = (HttpClient)args[2];
 
-            final Activity activity = (Activity)args[0];
-            final TableLayout tableLayout = (TableLayout)args[1];
+            List<Provider> providers = LoadProviders(activity, httpClient);
 
-            MyHttpClient client = new MyHttpClient();
+            List<Title> titles = LoadTitles(activity, (Provider)providers.get(0));
 
-            ProviderFactoryImpl factory = new ProviderFactoryImpl(client);
-
-            final ArrayList<Provider> providers = new ArrayList<Provider>(factory.getProviders().values());
-
-            activity.runOnUiThread(new Runnable()
-            {
-                @Override
-                public void run() {
-                    ListView providersListView = (ListView) activity.findViewById(R.id.providers_list_view);
-
-                    ArrayAdapter<Object> arrayAdapter = new ArrayAdapter<Object>(activity, R.layout.providers_table_row, providers.toArray())  ;
-
-                    providersListView.setAdapter(arrayAdapter);
-                }
-            });
-
-
-            client.close();
+            LoadSegments(activity, videoPlayer, (Title)titles.get(0));
 
             return null;
         }
+    }
+
+    private static List<Title> LoadTitles(final Activity activity, final Provider provider)
+    {
+        final List titles = provider.getLatestTitles(0, 1);
+
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                ListView titlesListView = (ListView)activity.findViewById(R.id.titles_list_view);
+                ArrayAdapter<Object> arrayAdapter = new ArrayAdapter<Object>(activity, R.layout.titles_table_row, titles.toArray());
+                titlesListView.setAdapter(arrayAdapter);
+            }
+        });
+
+        return titles;
     }
 
     private static class LoadTitlesTask extends AsyncTask<Object[], Void, Void>
@@ -129,31 +134,37 @@ public class VideoFragment extends Fragment
         protected Void doInBackground(Object[]... objects)
         {
             Object[] args = objects[0];
+            Activity activity = (Activity)args[0];
+            Provider provider = (Provider)args[1];
 
-            final Activity activity = (Activity)args[0];
-
-            MyHttpClient client = new MyHttpClient();
-
-            ProviderFactoryImpl factory = new ProviderFactoryImpl(client);
-
-            final ArrayList<Provider> providers = new ArrayList<Provider>(factory.getProviders().values());
-
-            activity.runOnUiThread(new Runnable()
-            {
-                @Override
-                public void run() {
-                    ListView titlesListView = (ListView) activity.findViewById(R.id.titles_list_view);
-
-                    ArrayAdapter<Object> arrayAdapter = new ArrayAdapter<Object>(activity, R.layout.titles_table_row, providers.toArray())  ;
-
-                    titlesListView.setAdapter(arrayAdapter);
-                }
-            });
-
-            client.close();
+            LoadTitles(activity, provider);
 
             return null;
         }
+    }
+
+    private static void LoadSegments(final Activity activity, final VideoPlayer videoPlayer, final Title title)
+    {
+        final List<Segment> segments = title.getSegments();
+
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                ListView segmentsListView = (ListView)activity.findViewById(R.id.segments_list_view);
+                ArrayAdapter<Object> arrayAdapter = new ArrayAdapter<Object>(activity, R.layout.segments_table_row, segments.toArray());
+                segmentsListView.setAdapter(arrayAdapter);
+
+                segmentsListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                    public void onItemClick(AdapterView<?> parent, View view,
+                                            int position, long id)
+                    {
+                        Segment segment = segments.get(position);
+                        Log.v(LOG, segment.toString());
+                        videoPlayer.play(segment);
+                    }
+                });
+            }
+        });
     }
 
     private static class LoadSegmentsTask extends AsyncTask<Object[], Void, Void>
@@ -162,36 +173,11 @@ public class VideoFragment extends Fragment
         protected Void doInBackground(Object[]... objects)
         {
             Object[] args = objects[0];
-
             final Activity activity = (Activity)args[0];
-            final TableLayout tableLayout = (TableLayout)args[1];
+            final VideoPlayer videoPlayer = (VideoPlayer)args[1];
+            final Title title = (Title)args[2];
 
-            MyHttpClient client = new MyHttpClient();
-
-            ProviderFactoryImpl factory = new ProviderFactoryImpl(client);
-
-            final Iterator<Provider> providers = factory.getProviders().values().iterator();
-
-            activity.runOnUiThread(new Runnable()
-            {
-                @Override
-                public void run()
-                {
-                    while (providers.hasNext()) {
-                        Provider provider = providers.next();
-
-                        for (int i = 0; i < 4; i++) {
-                            TableRow row = new TableRow(activity);
-                            TextView textView = (TextView)activity.getLayoutInflater().inflate(R.layout.segments_table_row, null);
-                            textView.setText("hi there");
-                            row.addView(textView);
-                            tableLayout.addView(row);
-                        }
-                    }
-                }
-            });
-
-            client.close();
+            LoadSegments(activity, videoPlayer, title);
 
             return null;
         }
