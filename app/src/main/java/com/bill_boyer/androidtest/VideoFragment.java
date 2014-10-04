@@ -5,7 +5,6 @@ import android.app.Fragment;
 import android.net.http.AndroidHttpClient;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -23,21 +22,17 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpUriRequest;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 
 public class VideoFragment extends Fragment
 {
-    Activity mActivity;
     VideoPlayer mVideoPlayer;
+    MyHttpClient mHttpClient;
 
     private static final String LOG = "VideoFragment";
 
     public static VideoFragment newInstance()
     {
-        Log.v(LOG, "VideoFragment constructed");
-
         return new VideoFragment();
     }
 
@@ -59,14 +54,18 @@ public class VideoFragment extends Fragment
     {
         super.onStart();
 
-        Log.v(LOG, "VideoFragment started");
+        mVideoPlayer = new VideoPlayer(getActivity());
+        mHttpClient = new MyHttpClient();
 
-        mActivity = getActivity();
-        mVideoPlayer = new VideoPlayer(mActivity);
+        new LoadProvidersTask().execute(new Object[]{this, mHttpClient});
+    }
 
-        MyHttpClient httpClient = new MyHttpClient();
-
-        new LoadProvidersTask().execute(new Object[]{mActivity, mVideoPlayer, httpClient});
+    @Override
+    public void onStop()
+    {
+        super.onStop();
+        mHttpClient.close();
+        mVideoPlayer.onStop();
     }
 
     public void setIsVisible(boolean isVisible)
@@ -75,17 +74,29 @@ public class VideoFragment extends Fragment
             mVideoPlayer.setIsVisible(isVisible);
     }
 
-    private static List<Provider> LoadProviders(final Activity activity, HttpClient httpClient)
+    private List<Provider> loadProviders(HttpClient httpClient)
     {
         ProviderFactoryImpl factory = new ProviderFactoryImpl(httpClient);
         final List<Provider> providers = new ArrayList<Provider>(factory.getProviders().values());
 
+        final Activity activity = getActivity();
+
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                ListView providersListView = (ListView) activity.findViewById(R.id.providers_list_view);
+                final ListView listView = (ListView)activity.findViewById(R.id.providers_list_view);
                 ArrayAdapter<Object> arrayAdapter = new ArrayAdapter<Object>(activity, R.layout.providers_table_row, providers.toArray());
-                providersListView.setAdapter(arrayAdapter);
+                listView.setAdapter(arrayAdapter);
+
+                listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                    public void onItemClick(AdapterView<?> parent, View view,
+                                            int position, long id)
+                    {
+                        selectProvider(listView, position, providers.get(position));
+                    }
+                });
+
+                selectProvider(listView, 0, providers.get(0));
             }
         });
 
@@ -98,30 +109,42 @@ public class VideoFragment extends Fragment
         protected Void doInBackground(Object[]... objects)
         {
             Object[] args = objects[0];
-            Activity activity = (Activity)args[0];
-            VideoPlayer videoPlayer = (VideoPlayer)args[1];
-            HttpClient httpClient = (HttpClient)args[2];
+            VideoFragment fragment = (VideoFragment)args[0];
+            HttpClient httpClient = (HttpClient)args[1];
 
-            List<Provider> providers = LoadProviders(activity, httpClient);
-
-            List<Title> titles = LoadTitles(activity, (Provider)providers.get(0));
-
-            LoadSegments(activity, videoPlayer, (Title)titles.get(0));
+            fragment.loadProviders(httpClient);
 
             return null;
         }
     }
 
-    private static List<Title> LoadTitles(final Activity activity, final Provider provider)
+    public void selectProvider(ListView listView, int position, Provider provider)
     {
-        final List titles = provider.getLatestTitles(0, 1);
+        listView.setSelection(position);
+        new LoadTitlesTask().execute(new Object[]{this, provider});
+    }
+
+    private List<Title> loadTitles(final Provider provider)
+    {
+        final List<Title> titles = provider.getLatestTitles(0, 1);
+
+        final Activity activity = getActivity();
 
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                ListView titlesListView = (ListView)activity.findViewById(R.id.titles_list_view);
+                final ListView listView = (ListView)activity.findViewById(R.id.titles_list_view);
                 ArrayAdapter<Object> arrayAdapter = new ArrayAdapter<Object>(activity, R.layout.titles_table_row, titles.toArray());
-                titlesListView.setAdapter(arrayAdapter);
+                listView.setAdapter(arrayAdapter);
+
+                listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                    public void onItemClick(AdapterView<?> parent, View view,
+                                            int position, long id) {
+                        selectTitle(listView, position, titles.get(position));
+                    }
+                });
+
+                selectTitle(listView, 0, titles.get(0));
             }
         });
 
@@ -134,35 +157,42 @@ public class VideoFragment extends Fragment
         protected Void doInBackground(Object[]... objects)
         {
             Object[] args = objects[0];
-            Activity activity = (Activity)args[0];
+            VideoFragment fragment = (VideoFragment)args[0];
             Provider provider = (Provider)args[1];
 
-            LoadTitles(activity, provider);
+            fragment.loadTitles(provider);
 
             return null;
         }
     }
 
-    private static void LoadSegments(final Activity activity, final VideoPlayer videoPlayer, final Title title)
+    public void selectTitle(ListView listView, int position, Title title)
+    {
+        listView.setSelection(position);
+        new LoadSegmentsTask().execute(new Object[]{this, title});
+    }
+
+    private void loadSegments(final Title title)
     {
         final List<Segment> segments = title.getSegments();
+
+        final Activity activity = getActivity();
 
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                ListView segmentsListView = (ListView)activity.findViewById(R.id.segments_list_view);
+                final ListView listView = (ListView)activity.findViewById(R.id.segments_list_view);
                 ArrayAdapter<Object> arrayAdapter = new ArrayAdapter<Object>(activity, R.layout.segments_table_row, segments.toArray());
-                segmentsListView.setAdapter(arrayAdapter);
+                listView.setAdapter(arrayAdapter);
 
-                segmentsListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                     public void onItemClick(AdapterView<?> parent, View view,
-                                            int position, long id)
-                    {
-                        Segment segment = segments.get(position);
-                        Log.v(LOG, segment.toString());
-                        videoPlayer.play(segment);
+                                            int position, long id) {
+                        selectSegment(listView, position, segments.get(position));
                     }
                 });
+
+                selectSegment(listView, 0, segments.get(0));
             }
         });
     }
@@ -173,14 +203,19 @@ public class VideoFragment extends Fragment
         protected Void doInBackground(Object[]... objects)
         {
             Object[] args = objects[0];
-            final Activity activity = (Activity)args[0];
-            final VideoPlayer videoPlayer = (VideoPlayer)args[1];
-            final Title title = (Title)args[2];
+            final VideoFragment fragment = (VideoFragment)args[0];
+            final Title title = (Title)args[1];
 
-            LoadSegments(activity, videoPlayer, title);
+            fragment.loadSegments(title);
 
             return null;
         }
+    }
+
+    public void selectSegment(ListView listView, int position, Segment segment)
+    {
+        listView.setSelection(position);
+        mVideoPlayer.play(segment);
     }
 
     public static class MyHttpClient implements com.bill_boyer.media.catalog.HttpClient
