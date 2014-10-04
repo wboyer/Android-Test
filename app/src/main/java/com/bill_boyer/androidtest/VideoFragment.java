@@ -133,7 +133,7 @@ public class VideoFragment extends Fragment
             @Override
             public void run() {
                 ListView listView = (ListView)activity.findViewById(R.id.titles_list_view);
-                final Playlist playlist = new Playlist(activity, R.layout.titles_table_row, titles);
+                final Playlist playlist = new Playlist(activity, R.layout.playlist_row, titles);
                 listView.setAdapter(playlist);
 
                 listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -181,7 +181,7 @@ public class VideoFragment extends Fragment
             @Override
             public void run() {
                 ListView listView = (ListView)activity.findViewById(R.id.segments_list_view);
-                final Playlist playlist = new Playlist(activity, R.layout.segments_table_row, segments);
+                final Playlist playlist = new Playlist(activity, R.layout.playlist_row, segments);
                 listView.setAdapter(playlist);
 
                 listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
