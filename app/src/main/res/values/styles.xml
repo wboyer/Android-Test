@@ -12,4 +12,8 @@
         <item name="android:paddingRight">8dp</item>
     </style>
 
+    <style name="VideoListRowHighlighted" parent="@style/VideoListRow">
+        <item name="android:textColor">@android:color/holo_blue_light</item>
+    </style>
+
 </resources>

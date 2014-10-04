@@ -9,7 +9,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
 import com.bill_boyer.media.catalog.HttpClient;
@@ -84,19 +83,19 @@ public class VideoFragment extends Fragment
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                final ListView listView = (ListView)activity.findViewById(R.id.providers_list_view);
-                ArrayAdapter<Object> arrayAdapter = new ArrayAdapter<Object>(activity, R.layout.providers_table_row, providers.toArray());
-                listView.setAdapter(arrayAdapter);
+                ListView listView = (ListView)activity.findViewById(R.id.providers_list_view);
+                final Playlist playlist = new Playlist(activity, R.layout.playlist_row, providers);
+                listView.setAdapter(playlist);
 
                 listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                     public void onItemClick(AdapterView<?> parent, View view,
                                             int position, long id)
                     {
-                        selectProvider(listView, position, providers.get(position));
+                        selectProvider(playlist, position, providers.get(position));
                     }
                 });
 
-                selectProvider(listView, 0, providers.get(0));
+                selectProvider(playlist, 0, providers.get(0));
             }
         });
 
@@ -118,9 +117,9 @@ public class VideoFragment extends Fragment
         }
     }
 
-    public void selectProvider(ListView listView, int position, Provider provider)
+    public void selectProvider(Playlist playlist, int position, Provider provider)
     {
-        listView.setSelection(position);
+        playlist.selectItem(position);
         new LoadTitlesTask().execute(new Object[]{this, provider});
     }
 
@@ -133,18 +132,18 @@ public class VideoFragment extends Fragment
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                final ListView listView = (ListView)activity.findViewById(R.id.titles_list_view);
-                ArrayAdapter<Object> arrayAdapter = new ArrayAdapter<Object>(activity, R.layout.titles_table_row, titles.toArray());
-                listView.setAdapter(arrayAdapter);
+                ListView listView = (ListView)activity.findViewById(R.id.titles_list_view);
+                final Playlist playlist = new Playlist(activity, R.layout.titles_table_row, titles);
+                listView.setAdapter(playlist);
 
                 listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                     public void onItemClick(AdapterView<?> parent, View view,
                                             int position, long id) {
-                        selectTitle(listView, position, titles.get(position));
+                        selectTitle((Playlist)parent.getAdapter(), position, titles.get(position));
                     }
                 });
 
-                selectTitle(listView, 0, titles.get(0));
+                selectTitle(playlist, 0, titles.get(0));
             }
         });
 
@@ -166,9 +165,9 @@ public class VideoFragment extends Fragment
         }
     }
 
-    public void selectTitle(ListView listView, int position, Title title)
+    public void selectTitle(Playlist playlist, int position, Title title)
     {
-        listView.setSelection(position);
+        playlist.selectItem(position);
         new LoadSegmentsTask().execute(new Object[]{this, title});
     }
 
@@ -181,18 +180,18 @@ public class VideoFragment extends Fragment
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                final ListView listView = (ListView)activity.findViewById(R.id.segments_list_view);
-                ArrayAdapter<Object> arrayAdapter = new ArrayAdapter<Object>(activity, R.layout.segments_table_row, segments.toArray());
-                listView.setAdapter(arrayAdapter);
+                ListView listView = (ListView)activity.findViewById(R.id.segments_list_view);
+                final Playlist playlist = new Playlist(activity, R.layout.segments_table_row, segments);
+                listView.setAdapter(playlist);
 
                 listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                     public void onItemClick(AdapterView<?> parent, View view,
                                             int position, long id) {
-                        selectSegment(listView, position, segments.get(position));
+                        selectSegment(playlist, position, segments.get(position));
                     }
                 });
 
-                selectSegment(listView, 0, segments.get(0));
+                selectSegment(playlist, 0, segments.get(0));
             }
         });
     }
@@ -212,9 +211,9 @@ public class VideoFragment extends Fragment
         }
     }
 
-    public void selectSegment(ListView listView, int position, Segment segment)
+    public void selectSegment(Playlist playlist, int position, Segment segment)
     {
-        listView.setSelection(position);
+        playlist.selectItem(position);
         mVideoPlayer.play(segment);
     }
 
