@@ -1,7 +1,6 @@
 package com.bill_boyer.androidtest;
 
 import android.app.Activity;
-import android.media.MediaPlayer;
 import android.net.Uri;
 import android.view.View;
 import android.widget.ToggleButton;
