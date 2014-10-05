@@ -51,20 +51,23 @@ public class VideoPlayer
             }
         });
 
+        final Runnable updatePlayPauseButton = new Runnable() {
+            @Override
+            public void run()
+            {
+                mPlayPauseButton.setEnabled(mPlayingSegment != null);
+                try {
+                    mPlayPauseButton.setChecked(mVideoView.isPlaying());
+                }
+                catch (Exception e) {}
+            }
+        };
+
         mTimer = new Timer();
         mTimer.schedule(new TimerTask() {
             @Override
             public void run() {
-                activity.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        mPlayPauseButton.setEnabled(mPlayingSegment != null);
-                        try {
-                            mPlayPauseButton.setChecked(mVideoView.isPlaying());
-                        }
-                        catch (Exception e) {}
-                    }
-                });
+                activity.runOnUiThread(updatePlayPauseButton);
             }}, 0, 1000);
 
         setPlayingSegment(null);
