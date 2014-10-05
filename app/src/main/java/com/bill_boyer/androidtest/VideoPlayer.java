@@ -1,6 +1,7 @@
 package com.bill_boyer.androidtest;
 
 import android.app.Activity;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.view.View;
 import android.widget.ToggleButton;
@@ -11,11 +12,12 @@ import com.bill_boyer.media.catalog.Segment;
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class VideoPlayer
+public class VideoPlayer implements MediaPlayer.OnCompletionListener
 {
-    Timer mTimer;
-    VideoView mVideoView;
-    ToggleButton mPlayPauseButton;
+    private Activity mActivity;
+    private Timer mTimer;
+    private VideoView mVideoView;
+    private ToggleButton mPlayPauseButton;
     private Segment mPlayingSegment;
     boolean mIsVisible;
 
@@ -29,6 +31,7 @@ public class VideoPlayer
     public void setPlayingSegment(Segment mPlayingSegment)
     {
         this.mPlayingSegment = mPlayingSegment;
+        updatePlayPauseButton();
     }
 
     public boolean getIsVisible()
@@ -38,45 +41,60 @@ public class VideoPlayer
 
     public VideoPlayer(final Activity activity)
     {
+        mActivity = activity;
+
         mVideoView = (VideoView)activity.findViewById(R.id.video_view);
+        mVideoView.setOnCompletionListener(this);
 
         mPlayPauseButton = (ToggleButton)activity.findViewById(R.id.play_pause_button);
 
-        mPlayPauseButton.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
+        mPlayPauseButton.setOnClickListener(new View.OnClickListener()
+        {
+            public void onClick(View v)
+            {
                 if (mVideoView.isPlaying())
                     mVideoView.pause();
                 else
                     mVideoView.start();
+                updatePlayPauseButton();
             }
         });
 
-        final Runnable updatePlayPauseButton = new Runnable() {
-            @Override
-            public void run()
-            {
-                mPlayPauseButton.setEnabled(mPlayingSegment != null);
-                try {
-                    mPlayPauseButton.setChecked(mVideoView.isPlaying());
-                }
-                catch (Exception e) {}
-            }
-        };
-
         mTimer = new Timer();
-        mTimer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                activity.runOnUiThread(updatePlayPauseButton);
-            }}, 0, 1000);
 
         setPlayingSegment(null);
     }
 
+    final Runnable mUpdatePlayPauseButton = new Runnable() {
+        @Override
+        public void run()
+        {
+            mPlayPauseButton.setEnabled(mPlayingSegment != null);
+            try {
+                mPlayPauseButton.setChecked(mVideoView.isPlaying());
+            }
+            catch (Exception e) {}
+        }
+    };
+
+    private void updatePlayPauseButton()
+    {
+        if (mTimer != null)
+            mTimer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    mActivity.runOnUiThread(mUpdatePlayPauseButton);
+                }}, 100);
+    }
+
     public void onStop()
     {
-        mTimer.cancel();
-        mTimer.purge();
+        // Prevent race with updatePlayPauseButton() above.
+        Timer timer = mTimer;
+        mTimer = null;
+
+        timer.cancel();
+        timer.purge();
     }
 
     public void setIsVisible(boolean isVisible)
@@ -86,15 +104,24 @@ public class VideoPlayer
         if (!isVisible)
             if ((getPlayingSegment() != null) && mVideoView.isPlaying())
                 mVideoView.pause();
+
+        updatePlayPauseButton();
     }
 
     public void play(Segment segment)
     {
-        setPlayingSegment(segment);
-
         mVideoView.setVideoURI(Uri.parse(segment.getMediaURL().toString()));
 
         if (getIsVisible())
             mVideoView.start();
+
+        setPlayingSegment(segment);
+    }
+
+    @Override
+    public void onCompletion(MediaPlayer mediaPlayer)
+    {
+        mVideoView.seekTo(0);
+        updatePlayPauseButton();
     }
 }
