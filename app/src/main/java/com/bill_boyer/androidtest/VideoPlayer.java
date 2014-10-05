@@ -79,22 +79,28 @@ public class VideoPlayer implements MediaPlayer.OnCompletionListener
 
     private void updatePlayPauseButton()
     {
-        if (mTimer != null)
-            mTimer.schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    mActivity.runOnUiThread(mUpdatePlayPauseButton);
-                }}, 100);
+        synchronized (this)
+        {
+            if (mTimer != null)
+                mTimer.schedule(new TimerTask()
+                {
+                    @Override
+                    public void run()
+                    {
+                        mActivity.runOnUiThread(mUpdatePlayPauseButton);
+                    }
+                }, 100);
+        }
     }
 
     public void onStop()
     {
-        // Prevent race with updatePlayPauseButton() above.
-        Timer timer = mTimer;
-        mTimer = null;
-
-        timer.cancel();
-        timer.purge();
+        synchronized (this)
+        {
+            mTimer.cancel();
+            mTimer.purge();
+            mTimer = null;
+        }
     }
 
     public void setIsVisible(boolean isVisible)
@@ -121,7 +127,7 @@ public class VideoPlayer implements MediaPlayer.OnCompletionListener
     @Override
     public void onCompletion(MediaPlayer mediaPlayer)
     {
-        mVideoView.seekTo(0);
+        mVideoView.stopPlayback();
         updatePlayPauseButton();
     }
 }
