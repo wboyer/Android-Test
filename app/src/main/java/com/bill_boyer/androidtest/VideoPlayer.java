@@ -9,6 +9,7 @@ import android.widget.VideoView;
 
 import com.bill_boyer.media.catalog.Segment;
 
+import java.net.URL;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -116,10 +117,14 @@ public class VideoPlayer implements MediaPlayer.OnCompletionListener
 
     public void play(Segment segment)
     {
-        mVideoView.setVideoURI(Uri.parse(segment.getMediaURL().toString()));
+        URL url = segment.getMediaURL();
 
-        if (getIsVisible())
-            mVideoView.start();
+        if (url != null) {
+            mVideoView.setVideoURI(Uri.parse(url.toString()));
+
+            if (getIsVisible())
+                mVideoView.start();
+        }
 
         setPlayingSegment(segment);
     }

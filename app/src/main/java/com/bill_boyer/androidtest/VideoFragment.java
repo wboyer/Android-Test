@@ -5,6 +5,7 @@ import android.app.Fragment;
 import android.net.http.AndroidHttpClient;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,6 +19,9 @@ import com.bill_boyer.media.catalog.Segment;
 import com.bill_boyer.media.catalog.impl.ProviderFactoryImpl;
 
 import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
+import org.apache.http.Header;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpUriRequest;
 
 import java.util.ArrayList;
@@ -125,7 +129,7 @@ public class VideoFragment extends Fragment
 
     private List<Title> loadTitles(final Provider provider)
     {
-        final List<Title> titles = provider.getLatestTitles(0, 1);
+        final List<Title> titles = provider.getLatestTitles(0, 2);
 
         final Activity activity = getActivity();
 
@@ -213,6 +217,7 @@ public class VideoFragment extends Fragment
 
     public void selectSegment(Playlist playlist, int position, Segment segment)
     {
+        Log.v(LOG, segment.getMediaURL().toString());
         playlist.selectItem(position);
         mVideoPlayer.play(segment);
     }
@@ -228,12 +233,24 @@ public class VideoFragment extends Fragment
 
         public HttpResponse execute(HttpUriRequest request)
         {
+            Log.v(LOG, request.getURI().toString());
+
+            HttpResponse response = null;
+
             try {
-                return mClient.execute(request);
+                response = mClient.execute(request);
+
+                final int statusCode = response.getStatusLine().getStatusCode();
+
+                if (statusCode != HttpStatus.SC_OK) {
+                    Header[] headers = response.getHeaders("Location");
+                    if ((headers != null) && (headers.length > 0))
+                        response = execute(new HttpGet(headers[headers.length - 1].getValue()));
+                }
             } catch (Exception e) {
                 e.printStackTrace();
-                return null;
             }
+            return response;
         }
 
         public void close()
