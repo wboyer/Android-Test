@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ToggleButton;
 import android.widget.VideoView;
 
@@ -18,6 +19,7 @@ public class VideoPlayer implements MediaPlayer.OnCompletionListener
     private Activity mActivity;
     private Timer mTimer;
     private VideoView mVideoView;
+    private Button mBack15sButton;
     private ToggleButton mPlayPauseButton;
     private Segment mPlayingSegment;
     boolean mIsVisible;
@@ -46,6 +48,21 @@ public class VideoPlayer implements MediaPlayer.OnCompletionListener
 
         mVideoView = (VideoView)activity.findViewById(R.id.video_view);
         mVideoView.setOnCompletionListener(this);
+
+        mBack15sButton = (Button)activity.findViewById(R.id.back_15s_button);
+
+        mBack15sButton.setOnClickListener(new View.OnClickListener()
+        {
+            public void onClick(View v)
+            {
+                int position = mVideoView.getCurrentPosition() - 15000;
+
+                if (position < 0)
+                    position = 0;
+
+                mVideoView.seekTo(position);
+            }
+        });
 
         mPlayPauseButton = (ToggleButton)activity.findViewById(R.id.play_pause_button);
 

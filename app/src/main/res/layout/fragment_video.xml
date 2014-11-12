@@ -80,11 +80,23 @@
             android:orientation="horizontal"
             android:background="#3c3c3c">
 
+            <Button
+                android:layout_width="100dp"
+                android:layout_height="match_parent"
+                android:paddingTop="5dp"
+                android:paddingBottom="5dp"
+                android:textSize="6pt"
+                android:enabled="true"
+                android:textColor="#ffffff"
+                android:text="Back 15s"
+                android:id="@+id/back_15s_button" />
+
             <ToggleButton
                 android:layout_width="80dp"
                 android:layout_height="match_parent"
                 android:paddingTop="5dp"
                 android:paddingBottom="5dp"
+                android:textSize="6pt"
                 android:textOff="Play"
                 android:textOn="Pause"
                 android:enabled="false"
